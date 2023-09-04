@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+
+# Check for required tools and install them if necessary
+command -v jq >/dev/null 2>&1 || { echo >&2 "I require 'jq' but it's not installed. Installing now..."; sudo apt-get install -y jq; }
+command -v sponge >/dev/null 2>&1 || { echo >&2 "I require 'sponge' but it's not installed. Installing now..."; sudo apt-get install -y moreutils; }
+
+createapi() {
+    IFS=':' read -ra ADDR <<< "$1"
+    database=${ADDR[0]}
+    port=${ADDR[1]}
+
+    env="PORT=$port\nDATABASE_URL=\"mysql://python:SucessoZOP2022!@app.agenciaboz.com.br:3306/$database\""
+
+    prisma='generator client {
+        provider = "prisma-client-js"
+        previewFeatures = ["fullTextSearch", "fullTextIndex"]
+    }
+
+    datasource db {
+        provider = "mysql"
+        url      = env("DATABASE_URL")
+    }'
+
+    echo "initializing npm package"
+    npm init --yes > /dev/null
+    echo "installing dependencies"
+    yarn add express dotenv @prisma/client body-parser cookie-parser cors https axios${io_flag:+ socket.io} > /dev/null
+    echo "installing dev dependencies"
+    yarn add -D typescript @types/express @types/node prisma concurrently nodemon @types/cors @types/cookie-parser > /dev/null
+
+    echo "generating typescript config"
+    npx tsc --init > /dev/null
+    echo "configuring out dir for typescript build"
+    sed 's|"outDir": "./"|"outDir": "./dist"|g' tsconfig.json | sponge tsconfig.json
+
+    echo "configuring yarn scripts"
+    jq '.scripts += {"build":"npx tsc", "start":"node dist/index.js", "dev":"concurrently \"npx tsc --watch\" \"nodemon -q dist/index.js\""}' package.json | sponge package.json
+
+    echo "initializing prisma"
+    npx prisma init > /dev/null
+
+    echo "configuring .env and schemas"
+    echo -e $env > "./.env"
+    echo -e "$prisma" > "./prisma/schema.prisma"
+
+    echo "adding index and routes files"
+    cat << 'EOF' > ./index.ts
+import express, { Express, Request, Response } from "express"
+import dotenv from "dotenv"
+import cors from "cors"
+import { router } from "./routes"
+import bodyParser from "body-parser"
+import cookieParser from "cookie-parser"
+import https from "https"
+import fs from "fs"
+${io_flag:+import { Server } from "socket.io"}
+${io_flag:+import { handleSocket } from "./src/io/socket"}
+
+dotenv.config()
+
+const app:Express = express()
+const port = process.env.PORT
+
+app.use(cors())
+app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({ extended: false }))
+app.use(cookieParser())
+app.use("/api", router)
+
+try {
+    const server = https.createServer({
+        key: fs.readFileSync("/etc/letsencrypt/live/app.agenciaboz.com.br/privkey.pem", "utf8"),
+        cert: fs.readFileSync("/etc/letsencrypt/live/app.agenciaboz.com.br/cert.pem", "utf8"),
+        ca: fs.readFileSync("/etc/letsencrypt/live/app.agenciaboz.com.br/chain.pem", "utf8"),
+    }, app);
+    ${io_flag:+const io = new Server(server, { cors: { origin: "*" } })}
+    ${io_flag:+io.on("connection", (socket) => {
+        handleSocket(socket)
+    })}
+    server.listen(port, () => {
+        console.log(`[server]: Server is running at https://${port}`)
+    })
+} catch {
+    app.listen(port, () => {
+        console.log(`[server]: Server is running at http://${port}`)
+    })
+}
+EOF
+
+    cat << 'EOF' > ./routes.ts
+import express, { Express, Request, Response } from "express"
+//import login from "./src/login"
+
+export const router = express.Router()
+
+//router.use("/login", login)
+EOF
+
+    if [ "$io_flag" == "--io" ]; then
+        mkdir -p "src/io" > /dev/null
+        cat << 'EOF' > ./src/io/socket.ts
+import { Socket } from "socket.io"
+
+export const handleSocket = (socket: Socket) => {
+    console.log(`new connection: ${socket.id}`)
+
+    socket.on("disconnect", () => {
+        console.log(`disconnected: ${socket.id}`)
+    })
+}
+EOF
+    fi
+
+    yarn build
+}
+
+io_flag=$2
+createapi $1
+
