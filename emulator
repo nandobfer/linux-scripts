@@ -1,4 +1,8 @@
 #!/bin/bash
 
 cd ~/Android/Sdk/emulator
-./emulator -avd Pixel_3a_API_34_extension_level_7_x86_64 &
+
+device_name=$(./emulator -list-avds | head -n 1)
+
+./emulator -avd "$device_name" &
+
