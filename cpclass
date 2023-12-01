@@ -10,7 +10,7 @@ else
 
     [ ! -d "$OUT" ] && mkdir "$OUT"
 
-    cp ./dist/definitions/src/class/* $OUT
+    cp -r ./dist/definitions/src/class/* $OUT
 
     echo 'ok'
 
