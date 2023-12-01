@@ -1,5 +1,5 @@
 #!/bin/bash
 
-cp ./dist/definitions/src/class/* $1
+cp ./dist/definitions/src/class/* $1/src/definitions/
 
 echo 'ok'
