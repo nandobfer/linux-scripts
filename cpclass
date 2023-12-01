@@ -1,5 +1,17 @@
 #!/bin/bash
 
-cp ./dist/definitions/src/class/* $1/src/definitions/
+if [ -z "$1" ]
+then
+    echo "usage (in your api root dir):"
+    echo "cpclass client_root_dir"
+else
 
-echo 'ok'
+    OUT="$1/src/definitions/"
+
+    [ ! -d "$OUT" ] && mkdir "$OUT"
+
+    cp ./dist/definitions/src/class/* $OUT
+
+    echo 'ok'
+
+fi
