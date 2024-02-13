@@ -6,11 +6,11 @@ then
     echo "cpclass client_root_dir"
 else
 
-    OUT="$1/src/definitions/"
+    OUT="$1/src/types/"
 
     [ ! -d "$OUT" ] && mkdir "$OUT"
 
-    cp -r ./dist/definitions/src/class/* $OUT
+    cp -r ./dist/types/src/class/* $OUT
 
     echo 'ok'
 
