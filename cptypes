@@ -9,9 +9,12 @@ else
     OUT="$1/src/types"
 
     [ ! -d "$OUT" ] && mkdir "$OUT"
+    OUT=$OUT/server
+    [ ! -d "$OUT" ] && mkdir "$OUT"
+    [ ! -d "$OUT/class" ] && mkdir "$OUT/class"  
 
-    cp -r ./dist/types/src/class/* $OUT/server/class
-    cp -r ./src/types/shared/* $OUT/server/
+    cp -r ./dist/types/src/class/* $OUT/class
+    cp -r ./src/types/shared/* $OUT
 
     echo 'ok'
 
