@@ -6,7 +6,7 @@ then
     echo "cptypes client_root_dir"
 else
 
-    OUT="$1/src/types/"
+    OUT="$1/src/types"
 
     [ ! -d "$OUT" ] && mkdir "$OUT"
 
