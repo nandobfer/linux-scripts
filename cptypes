@@ -3,7 +3,7 @@
 if [ -z "$1" ]
 then
     echo "usage (in your api root dir):"
-    echo "cpclass client_root_dir"
+    echo "cptypes client_root_dir"
 else
 
     OUT="$1/src/types/"
