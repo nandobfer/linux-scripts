@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Check if there is at least one parameter
+if [ "$#" -eq 1 ]; then
+    # Convert only the specified file
+    file=$1
+    if [[ $file == *.png ]]; then
+        ffmpeg -y -i "$file" -qscale 75 "${file%.png}.webp" > /dev/null 2>&1
+        echo "converted $file to ${file%.png}.webp"
+    else
+        echo "the specified file does not have a .png extension."
+    fi
+else
+    echo "converting all pngs to webp"
+    # No parameters were passed; convert every .png file in the current directory
+    for file in *.png; do
+        ffmpeg -y -i "$file" -qscale 75 "${file%.png}.webp" > /dev/null 2>&1
+        echo "converted $file to ${file%.png}.webp"
+    done
+fi

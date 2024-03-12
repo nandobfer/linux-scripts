@@ -1,6 +1,0 @@
-#!/bin/bash
-
-for file in *.png; do
-	ffmpeg -y -i $file -qscale 75 ${file%.png}.webp > /dev/null 2>&1
-	echo converted $file to ${file%.png}.webp
-done
