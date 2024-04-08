@@ -1,0 +1,17 @@
+#!/bin/bash
+
+SOURCE="source ~/.nvm/nvm.sh"
+COMMAND=""
+
+if [ -z "$1" ]
+then
+    COMMAND="pm2 list"
+    ssh burgos@agenciaboz "$SOURCE; $COMMAND"
+    echo ""
+    echo "usage:"
+    echo "apilog api_name"
+else
+    API=$1
+    COMMAND="pm2 logs $API --lines=100"
+    ssh burgos@agenciaboz "$SOURCE; $COMMAND"
+fi
