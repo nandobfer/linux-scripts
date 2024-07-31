@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Text to remove
+TEXT_TO_REMOVE=$1
+
+# Loop over each file in the directory
+for FILE in *"$TEXT_TO_REMOVE"*; do
+  # New filename with the text removed
+  NEW_FILE="${FILE//$TEXT_TO_REMOVE/}"
+  
+  # Rename the file
+  mv "$FILE" "$NEW_FILE"
+done
