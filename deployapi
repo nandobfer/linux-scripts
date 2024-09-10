@@ -1,0 +1,89 @@
+#!/bin/bash
+
+# check for .env file
+if [ -f .env ]; then
+    source .env
+else
+    echo ".env file not found."
+    exit 1
+fi
+
+# Check required variables
+if [ -z "$API_NAME" ] || [ -z "$API_USER" ] || [ -z "$API_PATH" ] || [ -z "$API_NAME_DEV" ] || [ -z "$API_PATH_DEV" ]; then
+    echo "Required API configuration is missing from .env (API_NAME, API_USER, API_PATH, API_NAME_DEV, API_PATH_DEV needed)"
+    exit 1
+fi
+
+# Check for argument
+if [ "$#" -eq 0 ]; then
+    echo "Please pass --prod or --dev to the script"
+    exit 1
+fi
+
+ENVIRONMENT=$1
+
+# Set API and environment specific variables
+if [ "$ENVIRONMENT" == "--prod" ]; then
+    api="$API_NAME"
+    user="$API_USER"
+    path="$API_PATH"
+    echo 'Setting environment to PROD'
+    # Handle .env file
+    sed -i '/# prod/{n;s/^#\s//;n;s/^#\s//}' .env
+    sed -i '/# dev/{n;s/^\([^#]\)/#\1/;n;s/^\([^#]\)/#\1/}' .env
+    # Handle src/env.ts
+    sed -i '/\/\/ prod/{n;s/^\/\/\s//}' src/env.ts
+    sed -i '/\/\/ dev/{n;s/^\([^\/]\)/\/\/ \1/}' src/env.ts
+    # Handle index.ts
+    sed -i '/\/\/ prod/{n;s/^[ \t]*\/\/\s*//;n;s/^[ \t]*\/\/\s*//;n;s/^[ \t]*\/\/\s*//}' index.ts
+    sed -i '/\/\/ dev/{n;s/^[ \t]*\([^\/]\)/\/\/ \1/;n;s/^[ \t]*\([^\/]\)/\/\/ \1/;n;s/^[ \t]*\([^\/]\)/\/\/ \1/}' index.ts
+
+elif [ "$ENVIRONMENT" == "--dev" ]; then
+    api="$API_NAME_DEV"
+    user="$API_USER"
+    path="$API_PATH_DEV"
+    echo 'Setting environment to DEV'
+else
+    echo "Invalid argument. Please pass --prod or --dev"
+    exit 1
+fi
+
+echo 'compiling server files locally'
+yarn build
+
+echo 'Uploading build to server'
+scp -r dist ${user}@agenciaboz:${path}/
+
+echo 'uploading .env to server'
+scp .env ${user}@agenciaboz:${path}/
+
+echo 'uploading package.json to server'
+scp package.json ${user}@agenciaboz:${path}/
+
+echo 'syncing dependencies'
+ssh ${user}@agenciaboz "source ~/.nvm/nvm.sh; cd ${path}; yarn install --production --frozen-lockfile"
+
+echo 'Uploading prisma to server'
+scp -r prisma ${user}@agenciaboz:${path}/
+
+echo 'generating prisma client'
+ssh ${user}@agenciaboz "source ~/.nvm/nvm.sh; cd ${path}; npx prisma generate"
+
+echo 'restarting server api'
+ssh ${user}@agenciaboz "source ~/.nvm/nvm.sh; cd ${path}; pm2 restart ${api}"
+
+if [ "$ENVIRONMENT" == "--prod" ]; then
+    echo 'Setting environment back to DEV'
+    
+    # Handle .env file for DEV
+    sed -i '/# dev/{n;s/^#\+\s*//;n;s/^#\+\s*//}' .env
+    sed -i '/# prod/{n;s/^[^#]/# &/;n;s/^[^#]/# &/}' .env
+    # Handle src/env.ts
+    sed -i '/\/\/ dev/{n;s/^\/\/\s*//}' src/env.ts
+    sed -i '/\/\/ prod/{n;s/^[^\/]/\/\/ &/}' src/env.ts
+    # Handle index.ts
+    sed -i '/\/\/ prod/{n;s/^[ \t]*\([^\/]\)/\/\/ \1/;n;s/^[ \t]*\([^\/]\)/\/\/ \1/;n;s/^[ \t]*\([^\/]\)/\/\/ \1/}' index.ts
+    sed -i '/\/\/ dev/{n;s/^[ \t]*\/\/\s*//;n;s/^[ \t]*\/\/\s*//;n;s/^[ \t]*\/\/\s*//}' index.ts
+fi
+
+echo 'finished'
