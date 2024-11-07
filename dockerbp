@@ -6,7 +6,5 @@ then
     echo "dockerbp user/image:tag"
 else
 
-    docker build -t $1 . --no-cache
-    docker push $1
-
+    docker build -t $1 . --no-cache && docker push $1
 fi
