@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [ -z "$1" ]
+then
+    echo "usage (in the same directory of your Dockerfile):"
+    echo "dockerbp user/image:tag"
+else
+
+    docker build -t $1 . --no-cache
+    docker push $1
+
+fi
